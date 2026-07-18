@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://flowable.org/bpmn">
+
+  <process id="virtualCardApproval" name="Virtual Card Approval" isExecutable="true">
+
+    <startEvent id="startEvent" name="Start" />
+
+    <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="submitRequestTask" />
+
+    <userTask id="submitRequestTask" name="Submit Request" flowable:assignee="${employeeId}">
+      <documentation>Submit virtual card request with employee status, existing cards, and requested limit.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow2" sourceRef="submitRequestTask" targetRef="eligibilityDMN" />
+
+    <!-- DMN: card-eligibility -->
+    <serviceTask id="eligibilityDMN" name="Card Eligibility Check" flowable:type="dmn">
+      <extensionElements>
+        <flowable:field name="decisionTableReferenceKey"><flowable:string>card-eligibility</flowable:string></flowable:field>
+        <flowable:field name="sameDeployment"><flowable:string>true</flowable:string></flowable:field>
+        <flowable:field name="fallbackToDefaultTenant"><flowable:string>true</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow3" sourceRef="eligibilityDMN" targetRef="eligibilityGateway" />
+
+    <exclusiveGateway id="eligibilityGateway" name="Eligible?" />
+
+    <!-- Eligible -->
+    <sequenceFlow id="flow4a" sourceRef="eligibilityGateway" targetRef="managerApproval">
+      <conditionExpression>${eligible == true}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="managerApproval" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager approves virtual card request.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow5" sourceRef="managerApproval" targetRef="limitCheckDMN" />
+
+    <!-- DMN: card-limit-check -->
+    <serviceTask id="limitCheckDMN" name="Card Limit Check" flowable:type="dmn">
+      <extensionElements>
+        <flowable:field name="decisionTableReferenceKey"><flowable:string>card-limit-check</flowable:string></flowable:field>
+        <flowable:field name="sameDeployment"><flowable:string>true</flowable:string></flowable:field>
+        <flowable:field name="fallbackToDefaultTenant"><flowable:string>true</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow6" sourceRef="limitCheckDMN" targetRef="issueCardTask" />
+
+    <!-- HTTP service task: issue virtual card via mock API -->
+    <serviceTask id="issueCardTask" name="Issue Virtual Card" flowable:type="http">
+      <extensionElements>
+        <flowable:field name="requestMethod"><flowable:string>POST</flowable:string></flowable:field>
+        <flowable:field name="requestUrl"><flowable:string>${mockApiBaseUrl}/cards/issue</flowable:string></flowable:field>
+        <flowable:field name="requestHeaders"><flowable:string>Content-Type: application/json</flowable:string></flowable:field>
+        <flowable:field name="requestBody"><flowable:string>{"cardType":"virtual","employeeId":"${employeeId}","approvedLimit":${approvedLimit}}</flowable:string></flowable:field>
+        <flowable:field name="responseVariableName"><flowable:string>cardResponse</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow7" sourceRef="issueCardTask" targetRef="endEvent" />
+
+    <!-- Ineligible -->
+    <sequenceFlow id="flow4b" sourceRef="eligibilityGateway" targetRef="notifyRejection">
+      <conditionExpression>${eligible == false}</conditionExpression>
+    </sequenceFlow>
+
+    <serviceTask id="notifyRejection" name="Notify Rejection" flowable:expression="${execution.setVariable('rejected', true)}">
+      <documentation>Notify employee that virtual card request was rejected.</documentation>
+    </serviceTask>
+
+    <sequenceFlow id="flow8" sourceRef="notifyRejection" targetRef="rejectEndEvent" />
+
+    <endEvent id="endEvent" name="Card Issued" />
+    <endEvent id="rejectEndEvent" name="Request Rejected" />
+
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_vcard">
+    <bpmndi:BPMNPlane id="BPMNPlane_vcard" bpmnElement="virtualCardApproval">
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="startEvent">
+        <dc:Bounds x="60" y="180" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_submit" bpmnElement="submitRequestTask">
+        <dc:Bounds x="140" y="155" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_eligDMN" bpmnElement="eligibilityDMN">
+        <dc:Bounds x="280" y="155" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_gw" bpmnElement="eligibilityGateway">
+        <dc:Bounds x="440" y="170" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_mgr" bpmnElement="managerApproval">
+        <dc:Bounds x="530" y="70" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_limitDMN" bpmnElement="limitCheckDMN">
+        <dc:Bounds x="690" y="70" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_issue" bpmnElement="issueCardTask">
+        <dc:Bounds x="850" y="70" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="endEvent">
+        <dc:Bounds x="1010" y="85" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reject" bpmnElement="notifyRejection">
+        <dc:Bounds x="530" y="250" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_rejectEnd" bpmnElement="rejectEndEvent">
+        <dc:Bounds x="690" y="265" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_flow1" bpmnElement="flow1">
+        <di:waypoint x="96" y="198" /><di:waypoint x="140" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow2" bpmnElement="flow2">
+        <di:waypoint x="240" y="195" /><di:waypoint x="280" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow3" bpmnElement="flow3">
+        <di:waypoint x="400" y="195" /><di:waypoint x="440" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4a" bpmnElement="flow4a">
+        <di:waypoint x="465" y="170" /><di:waypoint x="530" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4b" bpmnElement="flow4b">
+        <di:waypoint x="465" y="220" /><di:waypoint x="530" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow5" bpmnElement="flow5">
+        <di:waypoint x="650" y="110" /><di:waypoint x="690" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow6" bpmnElement="flow6">
+        <di:waypoint x="810" y="110" /><di:waypoint x="850" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow7" bpmnElement="flow7">
+        <di:waypoint x="970" y="110" /><di:waypoint x="1010" y="103" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow8" bpmnElement="flow8">
+        <di:waypoint x="650" y="290" /><di:waypoint x="690" y="283" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

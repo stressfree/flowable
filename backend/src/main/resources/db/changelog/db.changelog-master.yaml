@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: david
+      changes:
+        - sql:
+            sql: |
+              CREATE SCHEMA IF NOT EXISTS flowable;
+
+              CREATE TABLE IF NOT EXISTS companies (
+                  id BIGSERIAL PRIMARY KEY,
+                  name VARCHAR(255) NOT NULL,
+                  parent_company_id BIGINT,
+                  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                  CONSTRAINT fk_companies_parent
+                      FOREIGN KEY (parent_company_id)
+                      REFERENCES companies(id)
+                      ON DELETE SET NULL
+              );
+
+              CREATE TABLE IF NOT EXISTS decisioning_bundles (
+                  id BIGSERIAL PRIMARY KEY,
+                  company_id BIGINT,
+                  bundle_type VARCHAR(50) NOT NULL,
+                  description TEXT,
+                  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+                  go_live_at TIMESTAMP WITH TIME ZONE,
+                  entrypoint_file_id BIGINT,
+                  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                  CONSTRAINT fk_bundles_company
+                      FOREIGN KEY (company_id)
+                      REFERENCES companies(id)
+                      ON DELETE SET NULL
+              );
+
+              CREATE TABLE IF NOT EXISTS bundle_files (
+                  id BIGSERIAL PRIMARY KEY,
+                  bundle_id BIGINT NOT NULL,
+                  filename VARCHAR(255) NOT NULL,
+                  mime_type VARCHAR(100) NOT NULL,
+                  content BYTEA NOT NULL,
+                  is_entrypoint BOOLEAN NOT NULL DEFAULT FALSE,
+                  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                  CONSTRAINT fk_bundle_files_bundle
+                      FOREIGN KEY (bundle_id)
+                      REFERENCES decisioning_bundles(id)
+                      ON DELETE CASCADE
+              );
+
+              ALTER TABLE decisioning_bundles
+                  ADD CONSTRAINT fk_bundles_entrypoint_file
+                      FOREIGN KEY (entrypoint_file_id)
+                      REFERENCES bundle_files(id)
+                      ON DELETE SET NULL;
+
+              CREATE INDEX idx_decisioning_bundles_company_type_status
+                  ON decisioning_bundles(company_id, bundle_type, status);
+
+              CREATE INDEX idx_decisioning_bundles_status_go_live
+                  ON decisioning_bundles(status, go_live_at)
+                  WHERE status = 'DRAFT' AND go_live_at IS NOT NULL;
+
+              CREATE INDEX idx_bundle_files_bundle_id
+                  ON bundle_files(bundle_id);

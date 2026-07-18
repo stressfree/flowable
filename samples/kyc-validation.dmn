@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             namespace="http://www.flowable.org/dmn"
+             name="KYC Validation">
+
+  <dmn:decision id="kyc-validation" name="KYC Validation">
+    <dmn:decisionTable id="kycValidationTable" hitPolicy="FIRST">
+
+      <dmn:input id="input_hasName" label="Has Name">
+        <dmn:inputExpression id="inputExpr_hasName" typeRef="boolean">
+          <dmn:text>hasName</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="input_hasDOB" label="Has DOB">
+        <dmn:inputExpression id="inputExpr_hasDOB" typeRef="boolean">
+          <dmn:text>hasDOB</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="input_hasAddress" label="Has Address">
+        <dmn:inputExpression id="inputExpr_hasAddress" typeRef="boolean">
+          <dmn:text>hasAddress</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="input_hasGovId" label="Has Government ID">
+        <dmn:inputExpression id="inputExpr_hasGovId" typeRef="boolean">
+          <dmn:text>hasGovernmentId</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="input_hasEmployment" label="Has Employment">
+        <dmn:inputExpression id="inputExpr_hasEmployment" typeRef="boolean">
+          <dmn:text>hasEmployment</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+
+      <dmn:output id="output_kycComplete" label="KYC Complete" typeRef="boolean" />
+      <dmn:output id="output_missingFields" label="Missing Fields" typeRef="string" />
+
+      <!-- Rule 1: all true -> complete -->
+      <dmn:rule id="rule1">
+        <dmn:inputEntry id="inputEntry1_1"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry1_2"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry1_3"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry1_4"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry1_5"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry1_1"><dmn:text>true</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="outputEntry1_2"><dmn:text>''</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+      <!-- Rule 2: any missing -> incomplete -->
+      <dmn:rule id="rule2">
+        <dmn:inputEntry id="inputEntry2_1"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry2_2"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry2_3"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry2_4"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry2_5"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry2_1"><dmn:text>false</dmn:text></dmn:outputEntry>
+        <dmn:outputEntry id="outputEntry2_2"><dmn:text>#{(hasName ? '' : 'fullName ') + (hasDOB ? '' : 'dob ') + (hasAddress ? '' : 'address ') + (hasGovernmentId ? '' : 'governmentId ') + (hasEmployment ? '' : 'employmentInfo ')}</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+    </dmn:decisionTable>
+  </dmn:decision>
+
+</dmn:definitions>

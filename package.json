@@ -1,0 +1,13 @@
+{
+  "name": "flowable-v2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Flowable v2 - decisioning platform with sample approval bundles",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}

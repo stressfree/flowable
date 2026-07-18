@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/cards/issue"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "success",
+      "mock": true,
+      "receivedAt": "{{now}}",
+      "data": {
+        "cardId": "vc-{{$random.uuid}}",
+        "cardType": "virtual",
+        "status": "ISSUED",
+        "message": "Virtual card issued successfully"
+      }
+    },
+    "fixedDelayMilliseconds": 200
+  }
+}

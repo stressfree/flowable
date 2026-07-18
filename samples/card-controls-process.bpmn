@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://flowable.org/bpmn">
+
+  <process id="card-controls-process" name="Card Controls Evaluation Process" isExecutable="true">
+
+    <startEvent id="startEvent" name="Start" />
+
+    <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="thresholdsDMN" />
+
+    <!-- DMN: card-control-thresholds -->
+    <serviceTask id="thresholdsDMN" name="Card Control Thresholds" flowable:type="dmn">
+      <extensionElements>
+        <flowable:field name="decisionTableReferenceKey"><flowable:string>card-control-thresholds</flowable:string></flowable:field>
+        <flowable:field name="sameDeployment"><flowable:string>true</flowable:string></flowable:field>
+        <flowable:field name="fallbackToDefaultTenant"><flowable:string>true</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow2" sourceRef="thresholdsDMN" targetRef="approvalGateway" />
+
+    <exclusiveGateway id="approvalGateway" name="Approval Level?" />
+
+    <!-- AUTO -->
+    <sequenceFlow id="flow3a" sourceRef="approvalGateway" targetRef="autoApply">
+      <conditionExpression>${approvalLevel == 'AUTO'}</conditionExpression>
+    </sequenceFlow>
+
+    <serviceTask id="autoApply" name="Auto-Apply" flowable:expression="${execution.setVariable('autoApplied', true)}">
+      <documentation>Automatically applied - low value or non-increase change.</documentation>
+    </serviceTask>
+
+    <sequenceFlow id="flow4a" sourceRef="autoApply" targetRef="endEvent" />
+
+    <!-- MANAGER -->
+    <sequenceFlow id="flow3b" sourceRef="approvalGateway" targetRef="managerTask">
+      <conditionExpression>${approvalLevel == 'MANAGER'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="managerTask" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager approval required for limit increases $1000-$5000.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow4b" sourceRef="managerTask" targetRef="endEvent" />
+
+    <!-- DUAL -->
+    <sequenceFlow id="flow3c" sourceRef="approvalGateway" targetRef="dualManagerTask">
+      <conditionExpression>${approvalLevel == 'DUAL'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="dualManagerTask" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager approval for limit increases over $5000.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow5" sourceRef="dualManagerTask" targetRef="financeTask" />
+
+    <userTask id="financeTask" name="Finance Approval" flowable:candidateGroups="finance">
+      <documentation>Finance approval required for limit increases over $5000.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow6" sourceRef="financeTask" targetRef="endEvent" />
+
+    <endEvent id="endEvent" name="Evaluation Complete" />
+
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ccProcess">
+    <bpmndi:BPMNPlane id="BPMNPlane_ccProcess" bpmnElement="card-controls-process">
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="startEvent">
+        <dc:Bounds x="60" y="180" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_dmn" bpmnElement="thresholdsDMN">
+        <dc:Bounds x="140" y="155" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_gw" bpmnElement="approvalGateway">
+        <dc:Bounds x="320" y="170" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_auto" bpmnElement="autoApply">
+        <dc:Bounds x="410" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_mgr" bpmnElement="managerTask">
+        <dc:Bounds x="410" y="170" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_dualMgr" bpmnElement="dualManagerTask">
+        <dc:Bounds x="410" y="290" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_fin" bpmnElement="financeTask">
+        <dc:Bounds x="580" y="290" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="endEvent">
+        <dc:Bounds x="580" y="185" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_f1" bpmnElement="flow1"><di:waypoint x="96" y="198" /><di:waypoint x="140" y="195" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f2" bpmnElement="flow2"><di:waypoint x="280" y="195" /><di:waypoint x="320" y="195" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f3a" bpmnElement="flow3a"><di:waypoint x="345" y="170" /><di:waypoint x="410" y="100" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f3b" bpmnElement="flow3b"><di:waypoint x="370" y="195" /><di:waypoint x="410" y="210" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f3c" bpmnElement="flow3c"><di:waypoint x="345" y="220" /><di:waypoint x="410" y="330" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f4a" bpmnElement="flow4a"><di:waypoint x="510" y="100" /><di:waypoint x="598" y="185" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f4b" bpmnElement="flow4b"><di:waypoint x="530" y="210" /><di:waypoint x="580" y="203" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f5" bpmnElement="flow5"><di:waypoint x="530" y="330" /><di:waypoint x="580" y="330" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f6" bpmnElement="flow6"><di:waypoint x="640" y="290" /><di:waypoint x="598" y="221" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

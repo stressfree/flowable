@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://flowable.org/bpmn">
+
+  <process id="expenseTieredEscalation" name="Expense Approval - Tiered Amount Escalation" isExecutable="true">
+
+    <startEvent id="startEvent" name="Start" />
+
+    <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="submitExpenseTask" />
+
+    <userTask id="submitExpenseTask" name="Submit Expense" flowable:assignee="${employeeId}">
+      <documentation>Submit expense report for tiered approval processing.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow2" sourceRef="submitExpenseTask" targetRef="amountThresholdsDMN" />
+
+    <!-- DMN: amount-thresholds -->
+    <serviceTask id="amountThresholdsDMN" name="Amount Thresholds" flowable:type="dmn">
+      <extensionElements>
+        <flowable:field name="decisionTableReferenceKey"><flowable:string>amount-thresholds</flowable:string></flowable:field>
+        <flowable:field name="sameDeployment"><flowable:string>true</flowable:string></flowable:field>
+        <flowable:field name="fallbackToDefaultTenant"><flowable:string>true</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow3" sourceRef="amountThresholdsDMN" targetRef="approvalLevelGateway" />
+
+    <exclusiveGateway id="approvalLevelGateway" name="Approval Level?" />
+
+    <!-- AUTO: < $500 -->
+    <sequenceFlow id="flow4a" sourceRef="approvalLevelGateway" targetRef="autoApproveTask">
+      <conditionExpression>${approvalLevel == 'AUTO'}</conditionExpression>
+    </sequenceFlow>
+
+    <serviceTask id="autoApproveTask" name="Auto-Approve" flowable:expression="${execution.setVariable('approved', true)}">
+      <documentation>Automatically approved for expenses under $500.</documentation>
+    </serviceTask>
+
+    <sequenceFlow id="flow5a" sourceRef="autoApproveTask" targetRef="notifyExpense" />
+
+    <!-- MANAGER: $500-$5000 -->
+    <sequenceFlow id="flow4b" sourceRef="approvalLevelGateway" targetRef="managerApprovalTask">
+      <conditionExpression>${approvalLevel == 'MANAGER'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="managerApprovalTask" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager approval required for expenses $500-$5000.</documentation>
+    </userTask>
+
+    <!-- Boundary timer: 5 working days -> Financial Controller -->
+    <boundaryEvent id="managerTimeout" cancelActivity="true" attachedToRef="managerApprovalTask">
+      <timerEventDefinition flowable:businessCalendarName="businessCalendar">
+        <timeDuration>P5D</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+
+    <sequenceFlow id="flow5b" sourceRef="managerApprovalTask" targetRef="notifyExpense" />
+    <sequenceFlow id="flow5c" sourceRef="managerTimeout" targetRef="financialControllerEscalation" />
+
+    <userTask id="financialControllerEscalation" name="Financial Controller Escalation" flowable:candidateGroups="finance-controllers">
+      <documentation>Escalated to Financial Controller due to manager approval timeout.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow6" sourceRef="financialControllerEscalation" targetRef="notifyExpense" />
+
+    <!-- DUAL: > $5000 -->
+    <sequenceFlow id="flow4c" sourceRef="approvalLevelGateway" targetRef="dualManagerApproval">
+      <conditionExpression>${approvalLevel == 'DUAL'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="dualManagerApproval" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager approval for expenses over $5000 (dual approval required).</documentation>
+    </userTask>
+
+    <!-- Boundary timer: 5 working days -> Financial Controller -->
+    <boundaryEvent id="dualManagerTimeout" cancelActivity="true" attachedToRef="dualManagerApproval">
+      <timerEventDefinition flowable:businessCalendarName="businessCalendar">
+        <timeDuration>P5D</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+
+    <sequenceFlow id="flow7" sourceRef="dualManagerApproval" targetRef="financeApprovalTask" />
+    <sequenceFlow id="flow8" sourceRef="dualManagerTimeout" targetRef="financialControllerEscalation" />
+
+    <userTask id="financeApprovalTask" name="Finance Approval" flowable:candidateGroups="finance">
+      <documentation>Finance department approval required for expenses over $5000.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow9" sourceRef="financeApprovalTask" targetRef="notifyExpense" />
+
+    <!-- HTTP service task: notify expense system -->
+    <serviceTask id="notifyExpense" name="Notify Expense System" flowable:type="http">
+      <extensionElements>
+        <flowable:field name="requestMethod"><flowable:string>POST</flowable:string></flowable:field>
+        <flowable:field name="requestUrl"><flowable:string>${mockApiBaseUrl}/expense/notify</flowable:string></flowable:field>
+        <flowable:field name="requestHeaders"><flowable:string>Content-Type: application/json</flowable:string></flowable:field>
+        <flowable:field name="requestBody"><flowable:string>{"expenseId":"${expenseId}","employeeId":"${employeeId}","amount":${amount},"approvalLevel":"${approvalLevel}","status":"processed"}</flowable:string></flowable:field>
+        <flowable:field name="responseVariableName"><flowable:string>notifyResponse</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow10" sourceRef="notifyExpense" targetRef="endEvent" />
+
+    <endEvent id="endEvent" name="Expense Processed" />
+
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tiered">
+    <bpmndi:BPMNPlane id="BPMNPlane_tiered" bpmnElement="expenseTieredEscalation">
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="startEvent">
+        <dc:Bounds x="60" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_submit" bpmnElement="submitExpenseTask">
+        <dc:Bounds x="140" y="175" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_dmn" bpmnElement="amountThresholdsDMN">
+        <dc:Bounds x="280" y="175" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_gateway" bpmnElement="approvalLevelGateway">
+        <dc:Bounds x="440" y="190" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_auto" bpmnElement="autoApproveTask">
+        <dc:Bounds x="530" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_mgr" bpmnElement="managerApprovalTask">
+        <dc:Bounds x="530" y="175" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_timeout" bpmnElement="managerTimeout">
+        <dc:Bounds x="555" y="155" width="30" height="30" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_dualMgr" bpmnElement="dualManagerApproval">
+        <dc:Bounds x="530" y="310" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_dualTimeout" bpmnElement="dualManagerTimeout">
+        <dc:Bounds x="555" y="290" width="30" height="30" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_fc" bpmnElement="financialControllerEscalation">
+        <dc:Bounds x="700" y="175" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_finance" bpmnElement="financeApprovalTask">
+        <dc:Bounds x="700" y="310" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_notify" bpmnElement="notifyExpense">
+        <dc:Bounds x="890" y="175" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="endEvent">
+        <dc:Bounds x="1050" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_flow1" bpmnElement="flow1">
+        <di:waypoint x="96" y="218" /><di:waypoint x="140" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow2" bpmnElement="flow2">
+        <di:waypoint x="240" y="215" /><di:waypoint x="280" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow3" bpmnElement="flow3">
+        <di:waypoint x="400" y="215" /><di:waypoint x="440" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4a" bpmnElement="flow4a">
+        <di:waypoint x="465" y="190" /><di:waypoint x="530" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4b" bpmnElement="flow4b">
+        <di:waypoint x="465" y="215" /><di:waypoint x="530" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4c" bpmnElement="flow4c">
+        <di:waypoint x="465" y="240" /><di:waypoint x="530" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow5a" bpmnElement="flow5a">
+        <di:waypoint x="630" y="100" /><di:waypoint x="890" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow5b" bpmnElement="flow5b">
+        <di:waypoint x="650" y="215" /><di:waypoint x="700" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow5c" bpmnElement="flow5c">
+        <di:waypoint x="570" y="185" /><di:waypoint x="700" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow6" bpmnElement="flow6">
+        <di:waypoint x="840" y="215" /><di:waypoint x="890" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow7" bpmnElement="flow7">
+        <di:waypoint x="650" y="350" /><di:waypoint x="700" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow8" bpmnElement="flow8">
+        <di:waypoint x="570" y="320" /><di:waypoint x="770" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow9" bpmnElement="flow9">
+        <di:waypoint x="820" y="350" /><di:waypoint x="950" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow10" bpmnElement="flow10">
+        <di:waypoint x="1010" y="215" /><di:waypoint x="1050" y="208" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

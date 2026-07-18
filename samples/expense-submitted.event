@@ -1,0 +1,28 @@
+{
+  "key": "expense-submitted",
+  "name": "Expense Submitted",
+  "correlationParameters": [
+    {
+      "name": "employeeId",
+      "type": "string"
+    },
+    {
+      "name": "expenseId",
+      "type": "string"
+    }
+  ],
+  "payload": [
+    {
+      "name": "amount",
+      "type": "double"
+    },
+    {
+      "name": "description",
+      "type": "string"
+    },
+    {
+      "name": "hasTravel",
+      "type": "boolean"
+    }
+  ]
+}

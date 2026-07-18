@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/CMMN/20151109/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/cmmn"
+             xmlns:cmmndi="http://www.omg.org/spec/CMMN/20151109/CMMNDI"
+             xmlns:dc="http://www.omg.org/spec/CMMN/20151109/DC"
+             xmlns:di="http://www.omg.org/spec/CMMN/20151109/DI"
+             targetNamespace="http://www.flowable.org/casedef">
+
+  <case id="card-controls-case" name="Card Controls Change Approval">
+
+    <casePlanModel id="casePlanModel" name="Card Controls Change Approval">
+
+      <!-- Stage 1: Process Task - Evaluate Request (references card-controls-process) -->
+      <planItem id="planItem_evaluate" name="Evaluate Request"
+                definitionRef="stage_evaluate" />
+
+      <!-- Stage 2: Conditional Human Task - Manager Review (if amount > 1000) -->
+      <planItem id="planItem_managerReview" name="Manager Review"
+                definitionRef="ht_managerReview">
+        <entryCriterion id="ec_managerReview" sentryRef="sentry_amountOver1000" />
+      </planItem>
+
+      <!-- Stage 3: Conditional Human Task - Finance Review (if amount > 5000) -->
+      <planItem id="planItem_financeReview" name="Finance Review"
+                definitionRef="ht_financeReview">
+        <entryCriterion id="ec_financeReview" sentryRef="sentry_amountOver5000" />
+      </planItem>
+
+      <!-- Stage 4: Process Task - Apply Changes (references apply-card-changes) -->
+      <planItem id="planItem_applyChanges" name="Apply Changes"
+                definitionRef="stage_applyChanges">
+        <entryCriterion id="ec_applyChanges" sentryRef="sentry_reviewsComplete" />
+      </planItem>
+
+      <!-- Sentries: conditional on amount variable -->
+      <sentry id="sentry_amountOver1000">
+        <variableOnPart id="vop1" sourceRef="casePlanModel">
+          <variableName>amount</variableName>
+          <variableEvent>update</variableEvent>
+        </variableOnPart>
+        <ifPart id="ifPart1" condition="${amount > 1000}" />
+      </sentry>
+
+      <sentry id="sentry_amountOver5000">
+        <variableOnPart id="vop2" sourceRef="casePlanModel">
+          <variableName>amount</variableName>
+          <variableEvent>update</variableEvent>
+        </variableOnPart>
+        <ifPart id="ifPart2" condition="${amount > 5000}" />
+      </sentry>
+
+      <sentry id="sentry_reviewsComplete">
+        <planItemOnPart id="pop1" sourceRef="planItem_evaluate">
+          <standardEvent>complete</standardEvent>
+        </planItemOnPart>
+      </sentry>
+
+      <!-- Stage definitions -->
+      <stage id="stage_evaluate" name="Evaluate Request">
+        <planItem id="planItem_evalProcess" name="Run Evaluation Process"
+                  definitionRef="pt_evaluateProcess" />
+        <processTask id="pt_evaluateProcess" name="Evaluate Card Control Request"
+                     flowable:processRef="card-controls-process">
+          <extensionElements>
+            <flowable:inSourceVariable>amount</flowable:inSourceVariable>
+            <flowable:inSourceVariable>changeType</flowable:inSourceVariable>
+            <flowable:outTargetVariable>approvalLevel</flowable:outTargetVariable>
+          </extensionElements>
+        </processTask>
+      </stage>
+
+      <humanTask id="ht_managerReview" name="Manager Review"
+                 flowable:candidateGroups="managers">
+        <documentation>Manager review required for card control changes over $1,000.</documentation>
+      </humanTask>
+
+      <humanTask id="ht_financeReview" name="Finance Review"
+                 flowable:candidateGroups="finance">
+        <documentation>Finance review required for card control changes over $5,000.</documentation>
+      </humanTask>
+
+      <stage id="stage_applyChanges" name="Apply Changes">
+        <planItem id="planItem_applyProcess" name="Run Apply Changes Process"
+                  definitionRef="pt_applyProcess" />
+        <processTask id="pt_applyProcess" name="Apply Card Changes"
+                     flowable:processRef="apply-card-changes">
+          <extensionElements>
+            <flowable:inSourceVariable>amount</flowable:inSourceVariable>
+            <flowable:inSourceVariable>changeType</flowable:inSourceVariable>
+            <flowable:inSourceVariable>approvalLevel</flowable:inSourceVariable>
+          </extensionElements>
+        </processTask>
+      </stage>
+
+    </casePlanModel>
+
+  </case>
+
+  <!-- CMMN DI for diagram rendering -->
+  <cmmndi:CMMNDI>
+    <cmmndi:CMMNDiagram id="CMMNDiagram_cardControls">
+      <cmmndi:CMMNShape id="Shape_casePlanModel" cmmnElementRef="casePlanModel">
+        <dc:Bounds x="20" y="20" width="900" height="300" />
+      </cmmndi:CMMNShape>
+      <cmmndi:CMMNShape id="Shape_stageEvaluate" cmmnElementRef="stage_evaluate">
+        <dc:Bounds x="40" y="60" width="200" height="120" />
+      </cmmndi:CMMNShape>
+      <cmmndi:CMMNShape id="Shape_evalProcess" cmmnElementRef="pt_evaluateProcess">
+        <dc:Bounds x="60" y="90" width="160" height="60" />
+      </cmmndi:CMMNShape>
+      <cmmndi:CMMNShape id="Shape_mgrReview" cmmnElementRef="ht_managerReview">
+        <dc:Bounds x="290" y="50" width="140" height="60" />
+      </cmmndi:CMMNShape>
+      <cmmndi:CMMNShape id="Shape_finReview" cmmnElementRef="ht_financeReview">
+        <dc:Bounds x="290" y="140" width="140" height="60" />
+      </cmmndi:CMMNShape>
+      <cmmndi:CMMNShape id="Shape_stageApply" cmmnElementRef="stage_applyChanges">
+        <dc:Bounds x="480" y="60" width="200" height="120" />
+      </cmmndi:CMMNShape>
+      <cmmndi:CMMNShape id="Shape_applyProcess" cmmnElementRef="pt_applyProcess">
+        <dc:Bounds x="500" y="90" width="160" height="60" />
+      </cmmndi:CMMNShape>
+    </cmmndi:CMMNDiagram>
+  </cmmndi:CMMNDI>
+
+</definitions>

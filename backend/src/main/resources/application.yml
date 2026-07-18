@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/decisioning?currentSchema=public
+    username: decisioning
+    password: decisioning
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: public
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+flowable:
+  database-schema-update: true
+  database-schema: flowable
+  async-executor-activate: false
+  rest-api-enabled: false
+  event-registry:
+    enabled: true
+    database-schema-update: true
+
+server:
+  port: 8080
+
+bundle:
+  types:
+    EXPENSE_APPROVAL: "Expense Approval"
+    VIRTUAL_CARD_APPROVAL: "Virtual Card Approval"
+    PHYSICAL_CREDIT_CARD_APPROVAL: "Physical Credit Card Approval"
+    CARD_CONTROLS_CHANGE_APPROVAL: "Card Controls Change Approval"
+
+diagram:
+  elk:
+    direction: RIGHT
+    spacing: 40.0
+    layer-spacing: 60.0
+
+scheduler:
+  go-live-interval-ms: 30000
+
+mock:
+  api:
+    base-url: http://mock-api:8080

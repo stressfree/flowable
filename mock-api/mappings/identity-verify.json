@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/identity/verify"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "success",
+      "mock": true,
+      "receivedAt": "{{now}}",
+      "data": {
+        "verificationId": "ver-{{$random.uuid}}",
+        "verified": true,
+        "confidence": 0.95,
+        "message": "Identity verified successfully"
+      }
+    },
+    "fixedDelayMilliseconds": 200
+  }
+}

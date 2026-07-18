@@ -1,0 +1,39 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    enabled: false
+
+flowable:
+  database-schema-update: true
+  database-schema: flowable
+  async-executor-activate: false
+  rest-api-enabled: false
+  event-registry:
+    enabled: true
+    database-schema-update: true
+
+bundle:
+  types:
+    EXPENSE_APPROVAL: "Expense Approval"
+    VIRTUAL_CARD_APPROVAL: "Virtual Card Approval"
+    PHYSICAL_CREDIT_CARD_APPROVAL: "Physical Credit Card Approval"
+    CARD_CONTROLS_CHANGE_APPROVAL: "Card Controls Change Approval"
+
+diagram:
+  elk:
+    direction: RIGHT
+    spacing: 40.0
+    layer-spacing: 60.0
+
+scheduler:
+  go-live-interval-ms: 30000
+
+mock:
+  api:
+    base-url: http://localhost:8081

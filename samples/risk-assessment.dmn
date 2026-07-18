@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"
+                 namespace="http://www.flowable.org/dmn"
+                 name="Risk Assessment">
+
+  <dmn:decision id="risk-assessment" name="Risk Assessment">
+    <dmn:decisionTable id="riskAssessmentTable" hitPolicy="FIRST">
+
+      <dmn:input id="input_creditScore" label="Credit Score">
+        <dmn:inputExpression id="inputExpr_creditScore" typeRef="number">
+          <dmn:text>creditScore</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="input_identityVerified" label="Identity Verified">
+        <dmn:inputExpression id="inputExpr_identityVerified" typeRef="boolean">
+          <dmn:text>identityVerified</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+      <dmn:input id="input_employmentStatus" label="Employment Status">
+        <dmn:inputExpression id="inputExpr_employmentStatus" typeRef="string">
+          <dmn:text>employmentStatus</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+
+      <dmn:output id="output_riskLevel" label="Risk Level" typeRef="string" />
+
+      <dmn:rule id="rule1">
+        <dmn:inputEntry id="inputEntry1_1"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry1_2"><dmn:text>false</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry1_3"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry1_1"><dmn:text>'HIGH'</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+      <dmn:rule id="rule2">
+        <dmn:inputEntry id="inputEntry2_1"><dmn:text>&gt;= 750</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry2_2"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry2_3"><dmn:text>== 'FULL_TIME'</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry2_1"><dmn:text>'LOW'</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+      <dmn:rule id="rule3">
+        <dmn:inputEntry id="inputEntry3_1"><dmn:text>&gt;= 650 &amp;&amp; &lt; 750</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry3_2"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry3_3"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry3_1"><dmn:text>'MEDIUM'</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+      <dmn:rule id="rule3b">
+        <dmn:inputEntry id="inputEntry3b_1"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry3b_2"><dmn:text>true</dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry3b_3"><dmn:text>== 'PART_TIME'</dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry3b_1"><dmn:text>'MEDIUM'</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+      <dmn:rule id="rule4">
+        <dmn:inputEntry id="inputEntry4_1"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry4_2"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:inputEntry id="inputEntry4_3"><dmn:text></dmn:text></dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry4_1"><dmn:text>'HIGH'</dmn:text></dmn:outputEntry>
+      </dmn:rule>
+
+    </dmn:decisionTable>
+  </dmn:decision>
+
+</dmn:definitions>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dmn:definitions xmlns:dmn="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             namespace="http://www.flowable.org/dmn"
+             name="Amount Thresholds">
+
+  <dmn:decision id="amount-thresholds" name="Amount Thresholds">
+    <dmn:decisionTable id="amountThresholdsTable" hitPolicy="FIRST">
+
+      <dmn:input id="input_amount" label="Amount">
+        <dmn:inputExpression id="inputExpr_amount" typeRef="number">
+          <dmn:text>amount</dmn:text>
+        </dmn:inputExpression>
+      </dmn:input>
+
+      <dmn:output id="output_approvalLevel" label="Approval Level" typeRef="string" />
+
+      <!-- Rule 1: < 500 -> AUTO -->
+      <dmn:rule id="rule1">
+        <dmn:inputEntry id="inputEntry1_1">
+          <dmn:text>&lt; 500</dmn:text>
+        </dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry1_1">
+          <dmn:text>'AUTO'</dmn:text>
+        </dmn:outputEntry>
+      </dmn:rule>
+
+      <!-- Rule 2: 500..5000 -> MANAGER -->
+      <dmn:rule id="rule2">
+        <dmn:inputEntry id="inputEntry2_1">
+          <dmn:text>&gt;= 500 &amp;&amp; &lt;= 5000</dmn:text>
+        </dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry2_1">
+          <dmn:text>'MANAGER'</dmn:text>
+        </dmn:outputEntry>
+      </dmn:rule>
+
+      <!-- Rule 3: > 5000 -> DUAL -->
+      <dmn:rule id="rule3">
+        <dmn:inputEntry id="inputEntry3_1">
+          <dmn:text>&gt; 5000</dmn:text>
+        </dmn:inputEntry>
+        <dmn:outputEntry id="outputEntry3_1">
+          <dmn:text>'DUAL'</dmn:text>
+        </dmn:outputEntry>
+      </dmn:rule>
+
+    </dmn:decisionTable>
+  </dmn:decision>
+
+</dmn:definitions>

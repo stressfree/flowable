@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://flowable.org/bpmn">
+
+  <process id="expenseStandardEscalation" name="Expense Approval - Standard with Escalation" isExecutable="true">
+
+    <!-- Event-based start: triggered by expense-submitted Event Registry event -->
+    <startEvent id="expenseSubmittedStart" name="Expense Submitted">
+      <extensionElements>
+        <flowable:eventType>expense-submitted</flowable:eventType>
+        <flowable:eventOutParameter source="employeeId" target="employeeId"/>
+        <flowable:eventOutParameter source="expenseId" target="expenseId"/>
+        <flowable:eventOutParameter source="amount" target="amount"/>
+        <flowable:eventOutParameter source="description" target="description"/>
+        <flowable:eventOutParameter source="hasTravel" target="hasTravel"/>
+      </extensionElements>
+    </startEvent>
+
+    <sequenceFlow id="flow1" sourceRef="expenseSubmittedStart" targetRef="submitExpenseTask" />
+
+    <userTask id="submitExpenseTask" name="Submit Expense" flowable:assignee="${employeeId}">
+      <documentation>Submit the expense report for review.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow2" sourceRef="submitExpenseTask" targetRef="travelCheckDMN" />
+
+    <!-- DMN business rule task: calls travel-check decision table -->
+    <serviceTask id="travelCheckDMN" name="Travel Check" flowable:type="dmn">
+      <extensionElements>
+        <flowable:field name="decisionTableReferenceKey"><flowable:string>travel-check</flowable:string></flowable:field>
+        <flowable:field name="sameDeployment"><flowable:string>true</flowable:string></flowable:field>
+        <flowable:field name="fallbackToDefaultTenant"><flowable:string>true</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow3" sourceRef="travelCheckDMN" targetRef="travelGateway" />
+
+    <exclusiveGateway id="travelGateway" name="Travel Path?" />
+
+    <!-- Non-travel or travel <= $10K: STANDARD path -->
+    <sequenceFlow id="flow4a" sourceRef="travelGateway" targetRef="managerApprovalStandard">
+      <conditionExpression>${approvalPath == 'STANDARD'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="managerApprovalStandard" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager reviews and approves the expense report.</documentation>
+    </userTask>
+
+    <!-- Boundary timer: 5 working days, then escalate to Financial Controller -->
+    <boundaryEvent id="managerTimeout" cancelActivity="true" attachedToRef="managerApprovalStandard">
+      <timerEventDefinition flowable:businessCalendarName="workingDay">
+        <timeDuration>P5D</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+
+    <sequenceFlow id="flow5a" sourceRef="managerApprovalStandard" targetRef="notifyExpense" />
+    <sequenceFlow id="flow5b" sourceRef="managerTimeout" targetRef="financialControllerEscalation" />
+
+    <userTask id="financialControllerEscalation" name="Financial Controller Escalation" flowable:candidateGroups="finance-controllers">
+      <documentation>Escalated to Financial Controller due to manager approval timeout (5 working days).</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow6a" sourceRef="financialControllerEscalation" targetRef="notifyExpense" />
+
+    <!-- Travel > $10K: DIRECTOR path -->
+    <sequenceFlow id="flow4b" sourceRef="travelGateway" targetRef="managerApprovalTravel">
+      <conditionExpression>${approvalPath == 'DIRECTOR'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="managerApprovalTravel" name="Manager Approval" flowable:candidateGroups="managers">
+      <documentation>Manager reviews expense with travel exceeding $10,000.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow7" sourceRef="managerApprovalTravel" targetRef="seniorDirectorEscalation" />
+
+    <userTask id="seniorDirectorEscalation" name="Senior Director Escalation" flowable:candidateGroups="senior-directors">
+      <documentation>Escalated to Senior Director for travel expense exceeding $10,000.</documentation>
+    </userTask>
+
+    <sequenceFlow id="flow8" sourceRef="seniorDirectorEscalation" targetRef="notifyExpense" />
+
+    <!-- HTTP service task: notify external expense system via mock API -->
+    <serviceTask id="notifyExpense" name="Notify Expense System" flowable:type="http">
+      <extensionElements>
+        <flowable:field name="requestMethod"><flowable:string>POST</flowable:string></flowable:field>
+        <flowable:field name="requestUrl"><flowable:string>${mockApiBaseUrl}/expense/notify</flowable:string></flowable:field>
+        <flowable:field name="requestHeaders"><flowable:string>Content-Type: application/json</flowable:string></flowable:field>
+        <flowable:field name="requestBody"><flowable:string>{"expenseId":"${expenseId}","employeeId":"${employeeId}","amount":${amount},"status":"processed"}</flowable:string></flowable:field>
+        <flowable:field name="responseVariableName"><flowable:string>notifyResponse</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow9" sourceRef="notifyExpense" targetRef="endEvent" />
+
+    <endEvent id="endEvent" name="Expense Processed" />
+
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_expenseStandard">
+    <bpmndi:BPMNPlane id="BPMNPlane_expenseStandard" bpmnElement="expenseStandardEscalation">
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="expenseSubmittedStart">
+        <dc:Bounds x="60" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_submit" bpmnElement="submitExpenseTask">
+        <dc:Bounds x="150" y="135" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_dmn" bpmnElement="travelCheckDMN">
+        <dc:Bounds x="290" y="135" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_gateway" bpmnElement="travelGateway">
+        <dc:Bounds x="430" y="150" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_mgr_std" bpmnElement="managerApprovalStandard">
+        <dc:Bounds x="520" y="50" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_timeout" bpmnElement="managerTimeout">
+        <dc:Bounds x="545" y="30" width="30" height="30" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_fc" bpmnElement="financialControllerEscalation">
+        <dc:Bounds x="520" y="160" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_mgr_travel" bpmnElement="managerApprovalTravel">
+        <dc:Bounds x="520" y="280" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_director" bpmnElement="seniorDirectorEscalation">
+        <dc:Bounds x="690" y="280" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_notify" bpmnElement="notifyExpense">
+        <dc:Bounds x="700" y="160" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="endEvent">
+        <dc:Bounds x="870" y="175" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_flow1" bpmnElement="flow1">
+        <di:waypoint x="96" y="178" /><di:waypoint x="150" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow2" bpmnElement="flow2">
+        <di:waypoint x="250" y="175" /><di:waypoint x="290" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow3" bpmnElement="flow3">
+        <di:waypoint x="390" y="175" /><di:waypoint x="430" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4a" bpmnElement="flow4a">
+        <di:waypoint x="455" y="150" /><di:waypoint x="520" y="90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow4b" bpmnElement="flow4b">
+        <di:waypoint x="455" y="200" /><di:waypoint x="520" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow5a" bpmnElement="flow5a">
+        <di:waypoint x="640" y="90" /><di:waypoint x="700" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow5b" bpmnElement="flow5b">
+        <di:waypoint x="560" y="60" /><di:waypoint x="560" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow6a" bpmnElement="flow6a">
+        <di:waypoint x="660" y="200" /><di:waypoint x="700" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow7" bpmnElement="flow7">
+        <di:waypoint x="640" y="320" /><di:waypoint x="690" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow8" bpmnElement="flow8">
+        <di:waypoint x="830" y="320" /><di:waypoint x="760" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_flow9" bpmnElement="flow9">
+        <di:waypoint x="820" y="200" /><di:waypoint x="870" y="193" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

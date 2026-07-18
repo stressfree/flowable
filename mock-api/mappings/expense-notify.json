@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/expense/notify"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "success",
+      "mock": true,
+      "receivedAt": "{{now}}",
+      "data": {
+        "notificationId": "ntf-{{$random.uuid}}",
+        "notified": true,
+        "message": "Expense system notified successfully"
+      }
+    },
+    "fixedDelayMilliseconds": 200
+  }
+}

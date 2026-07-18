@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://flowable.org/bpmn">
+
+  <process id="apply-card-changes" name="Apply Card Changes" isExecutable="true">
+
+    <startEvent id="startEvent" name="Start" />
+
+    <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="applyChangeTask" />
+
+    <!-- HTTP service task: apply changes via mock API -->
+    <serviceTask id="applyChangeTask" name="Apply Limit Change" flowable:type="http">
+      <extensionElements>
+        <flowable:field name="requestMethod"><flowable:string>POST</flowable:string></flowable:field>
+        <flowable:field name="requestUrl"><flowable:string>${mockApiBaseUrl}/cards/apply-changes</flowable:string></flowable:field>
+        <flowable:field name="requestHeaders"><flowable:string>Content-Type: application/json</flowable:string></flowable:field>
+        <flowable:field name="requestBody"><flowable:string>{"amount":${amount},"changeType":"${changeType}","approvalLevel":"${approvalLevel}"}</flowable:string></flowable:field>
+        <flowable:field name="responseVariableName"><flowable:string>applyResponse</flowable:string></flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <sequenceFlow id="flow2" sourceRef="applyChangeTask" targetRef="notifyTask" />
+
+    <serviceTask id="notifyTask" name="Notify Cardholder" flowable:expression="${execution.setVariable('cardholderNotified', true)}">
+      <documentation>Notify cardholder that changes have been applied.</documentation>
+    </serviceTask>
+
+    <sequenceFlow id="flow3" sourceRef="notifyTask" targetRef="endEvent" />
+
+    <endEvent id="endEvent" name="Changes Applied" />
+
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_applyChanges">
+    <bpmndi:BPMNPlane id="BPMNPlane_applyChanges" bpmnElement="apply-card-changes">
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="startEvent">
+        <dc:Bounds x="60" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_apply" bpmnElement="applyChangeTask">
+        <dc:Bounds x="140" y="135" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_notify" bpmnElement="notifyTask">
+        <dc:Bounds x="320" y="135" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="endEvent">
+        <dc:Bounds x="480" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_f1" bpmnElement="flow1"><di:waypoint x="96" y="178" /><di:waypoint x="140" y="175" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f2" bpmnElement="flow2"><di:waypoint x="280" y="175" /><di:waypoint x="320" y="175" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_f3" bpmnElement="flow3"><di:waypoint x="440" y="175" /><di:waypoint x="480" y="178" /></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>
